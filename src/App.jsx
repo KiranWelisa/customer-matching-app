@@ -1,3 +1,5 @@
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, Building2, Target, TrendingUp, Users, DollarSign, Settings, Lightbulb, Upload, FileText, X, CheckCircle, Brain, Zap, BarChart3, Globe, Sparkles, AlertCircle, Download, RefreshCw, Award, ArrowRight, Activity, Shield, Rocket, ChevronRight, Loader2, Eye, EyeOff, Star, Flame, Clock, TrendingDown, CheckCircle2 } from 'lucide-react';
 
