@@ -1762,6 +1762,8 @@ Respond with ONLY valid JSON:
           </div>
         </div>
       </div>
+      <SpeedInsights />
+      <Analytics />
     </div>
   );
 };
