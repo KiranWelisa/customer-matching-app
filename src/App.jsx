@@ -1,14 +1,13 @@
-  // Slider for AI validation threshold
-  const [aiValidationThreshold, setAiValidationThreshold] = useState(0.5); // default 50%
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, Building2, Target, TrendingUp, Users, DollarSign, Settings, Lightbulb, Upload, FileText, X, CheckCircle, Brain, Zap, BarChart3, Globe, Sparkles, AlertCircle, Download, RefreshCw, Award, ArrowRight, Activity, Shield, Rocket, ChevronRight, Loader2, Eye, EyeOff, Star, Flame, Clock, TrendingDown, CheckCircle2, Copy, Check } from 'lucide-react';
 
 // Main component for the Customer Matching Application
 const App = () => {
   // State variables to manage the application's data and UI
   const [customerData, setCustomerData] = useState([]);
+  const [aiValidationThreshold, setAiValidationThreshold] = useState(0.5); // default 50%
   // Persistent storage states
   const [loadedFromStorage, setLoadedFromStorage] = useState(false);
   // --- Persistent Local Storage Functions ---
