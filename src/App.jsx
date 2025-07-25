@@ -158,10 +158,21 @@ const App = () => {
   }, []);
   const [inputDescription, setInputDescription] = useState('');
   const [matches, setMatches] = useState([]);
+  const [normalMatches, setNormalMatches] = useState([]);
+  const [aiMatches, setAiMatches] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [useAI, setUseAI] = useState(true);
   const [aiAnalysis, setAiAnalysis] = useState(null);
+
+  // Effect to switch between normal and AI matches when toggling useAI
+  useEffect(() => {
+    if (useAI && aiMatches.length > 0) {
+      setMatches(aiMatches);
+    } else if (!useAI && normalMatches.length > 0) {
+      setMatches(normalMatches);
+    }
+  }, [useAI]);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState('none');
   const [uploadError, setUploadError] = useState('');
@@ -643,6 +654,10 @@ Respond with ONLY valid JSON:
         .slice(0, 5)
         .map(match => ({ ...match, explanation: generateExplanation(match.scores, match, inputInfo, null) }));
 
+      // Store normal matches
+      setNormalMatches([...topMatches]);
+      setMatches([...topMatches]);
+
       if (topMatches.length < 3) {
         const belowThreshold = scoredCustomers
           .filter(customer => customer.totalScore < minThreshold)
@@ -729,7 +744,8 @@ Respond with ONLY valid JSON:
           console.log(`AI scoring completed: ${aiSuccessCount}/${topMatches.length} successful`);
           
           aiEnhancedMatches.sort((a, b) => b.totalScore - a.totalScore);
-          setMatches([...aiEnhancedMatches]);
+          setAiMatches([...aiEnhancedMatches]);
+          setMatches(useAI ? [...aiEnhancedMatches] : normalMatches);
           setMatchingProgress(60 + (iterationCount - 1) * 10);
           
           if (aiSuccessCount >= 3) {
