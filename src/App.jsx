@@ -7,6 +7,154 @@ import { Search, Building2, Target, TrendingUp, Users, DollarSign, Settings, Lig
 const App = () => {
   // State variables to manage the application's data and UI
   const [customerData, setCustomerData] = useState([]);
+  // Persistent storage states
+  const [loadedFromStorage, setLoadedFromStorage] = useState(false);
+  // --- Persistent Local Storage Functions ---
+  const STORAGE_PREFIX = 'welisa_csv_';
+  const STORAGE_KEY = `${STORAGE_PREFIX}default`;
+
+  // Get all stored CSV files
+  const getAllStoredFiles = () => {
+    const files = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith(STORAGE_PREFIX)) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key));
+          files.push({
+            key,
+            metadata: data.metadata
+          });
+        } catch (error) {
+          console.error('Error parsing stored data:', error);
+        }
+      }
+    }
+    return files;
+  };
+
+  // Export storage data
+  const exportStorageData = () => {
+    const data = loadFromLocalStorage();
+    if (!data) return;
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `welisa_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Check if data can fit in localStorage (5MB limit)
+  const checkStorageSize = (data) => {
+    const dataStr = JSON.stringify(data);
+    const sizeInBytes = new Blob([dataStr]).size;
+    const sizeInMB = sizeInBytes / (1024 * 1024);
+    return {
+      canStore: sizeInMB < 5,
+      size: sizeInMB,
+      sizeStr: `${sizeInMB.toFixed(2)}MB`
+    };
+  };
+
+  // Save to localStorage
+  const saveToLocalStorage = (data, file) => {
+    try {
+      const storageData = {
+        customerData: data,
+        metadata: {
+          fileName: file?.name || 'Unknown',
+          uploadDate: new Date().toISOString(),
+          rowCount: data.length,
+          fileSize: file?.size ? `${(file.size / 1024).toFixed(1)}KB` : 'Unknown'
+        }
+      };
+      const { canStore, sizeStr } = checkStorageSize(storageData);
+      if (!canStore) {
+        alert(`CSV data is too large (${sizeStr}) for browser storage. Maximum is ~5MB.`);
+        return false;
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData));
+      return true;
+    } catch (error) {
+      console.error('Failed to save to localStorage:', error);
+      if (error.name === 'QuotaExceededError') {
+        alert('Storage quota exceeded. The CSV file is too large for browser storage.');
+      }
+      return false;
+    }
+  };
+
+  // Load from localStorage
+  const loadFromLocalStorage = () => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      if (parsed?.customerData && Array.isArray(parsed.customerData)) {
+        return parsed;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to load from localStorage:', error);
+      return null;
+    }
+  };
+
+  // Import backup data
+  const importStorageData = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data?.customerData && Array.isArray(data.customerData)) {
+          setCustomerData(data.customerData);
+          setUploadedFile({
+            name: data.metadata?.fileName || 'Imported Data',
+            size: data.metadata?.fileSize || 'Unknown'
+          });
+          saveToLocalStorage(data.customerData, {
+            name: data.metadata?.fileName,
+            size: data.metadata?.fileSize
+          });
+          setUploadStatus('success');
+          setTimeout(() => setUploadStatus('none'), 3000);
+        } else {
+          setUploadError('Invalid backup file format');
+          setUploadStatus('error');
+        }
+      } catch (error) {
+        console.error('Failed to import backup:', error);
+        setUploadError('Failed to import backup file');
+        setUploadStatus('error');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Clear localStorage
+  const clearLocalStorage = () => {
+    localStorage.removeItem(STORAGE_KEY);
+  };
+  // Load CSV data from localStorage on mount
+  useEffect(() => {
+    const storedData = loadFromLocalStorage();
+    if (storedData) {
+      setCustomerData(storedData.customerData);
+      setUploadedFile({
+        name: storedData.metadata.fileName,
+        size: storedData.metadata.fileSize
+      });
+      setLoadedFromStorage(true);
+      // Auto-hide notification after 5s
+      setTimeout(() => setLoadedFromStorage(false), 5000);
+      console.log(`Loaded ${storedData.metadata.rowCount} customers from browser storage`);
+    }
+  }, []);
   const [inputDescription, setInputDescription] = useState('');
   const [matches, setMatches] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -746,7 +894,13 @@ Respond with ONLY valid JSON:
       setCustomerData(data);
       setUploadedFile(file);
       setUploadStatus('success');
-      
+
+      // Save to localStorage
+      const saved = saveToLocalStorage(data, file);
+      if (saved) {
+        console.log('Customer data saved to browser storage');
+      }
+
       setTimeout(() => setUploadStatus('none'), 3000);
       
     } catch (error) {
@@ -769,6 +923,8 @@ Respond with ONLY valid JSON:
     setSearchStatus({ stage: '', message: '', isImproving: false, totalStages: 0, currentStage: 0, lowQualityWarning: false });
     setIndustryInsights(null);
     setIsAnalyzing(false);
+    // Clear localStorage
+    clearLocalStorage();
   };
 
   const exportMatches = () => {
@@ -1607,6 +1763,20 @@ Respond with ONLY valid JSON:
                   )}
                 </div>
                 
+                {/* Storage status indicator */}
+                {customerData.length > 0 && loadedFromStorage && (
+                  <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-blue-700">
+                      <Shield className="h-4 w-4" />
+                      <span>Data restored from browser storage</span>
+                      {uploadedFile && (
+                        <span className="text-xs text-blue-600">
+                          ({uploadedFile.name} - {customerData.length} customers)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {customerData.length === 0 ? (
                   <div
                     className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
@@ -1695,25 +1865,74 @@ Respond with ONLY valid JSON:
                       ))}
                     </div>
                     
-                    <div className="mt-4 text-center">
-                      <div className="text-sm text-gray-500">
+                    <div className="mt-4">
+                      <div className="text-sm text-gray-500 text-center mb-3">
                         Showing {searchTerm ? filteredCustomers.length : Math.min(10, customerData.length)} of {customerData.length}
                       </div>
                       
-                      <input
-                        id="csv-replace"
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                      <label
-                        htmlFor="csv-replace"
-                        className="inline-flex items-center gap-2 mt-3 px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                        Replace Database
-                      </label>
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <input
+                          id="csv-replace"
+                          type="file"
+                          accept=".csv"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="csv-replace"
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          Replace Database
+                        </label>
+
+                        <button
+                          onClick={exportStorageData}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Backup Data
+                        </button>
+
+                        <input
+                          id="import-backup"
+                          type="file"
+                          accept=".json"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) importStorageData(file);
+                          }}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="import-backup"
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Import Backup
+                        </label>
+                      </div>
+
+                      {getAllStoredFiles().length > 1 && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Stored Databases</h4>
+                          <div className="space-y-2">
+                            {getAllStoredFiles().map((file) => (
+                              <div key={file.key} className="flex items-center justify-between text-sm">
+                                <div>
+                                  <span className="font-medium">{file.metadata.fileName}</span>
+                                  <span className="text-gray-500 ml-2">
+                                    ({file.metadata.rowCount} records)
+                                  </span>
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(file.metadata.uploadDate).toLocaleDateString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
