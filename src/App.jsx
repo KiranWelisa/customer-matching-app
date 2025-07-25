@@ -970,6 +970,8 @@ Respond with ONLY valid JSON:
     (customer.Kernactiviteit && customer.Kernactiviteit.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // ...existing code...
+  // Only keep the main return below
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       <div className="bg-white/80 backdrop-blur-lg shadow-lg sticky top-0 z-50 border-b border-gray-200/50">
@@ -1987,6 +1989,6 @@ Respond with ONLY valid JSON:
       <Analytics />
     </div>
   );
-};
+}
 
 export default App;
