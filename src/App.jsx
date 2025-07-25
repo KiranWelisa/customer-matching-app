@@ -712,7 +712,7 @@ Respond with ONLY valid JSON:
               const aiScoring = await getAIScore(aiAnalysisResult, match);
               if (aiScoring) {
                 const aiScore = aiScoring.referenceScore;
-                const blendedScore = match.totalScore * 0.4 + aiScore * 0.6;
+                const blendedScore = match.totalScore * 0.35 + aiScore * 0.65;
                 return { ...match, aiScore, totalScore: Math.min(1.0, blendedScore), aiInsight: aiScoring, explanation: generateExplanation(match.scores, match, inputInfo, aiScoring) };
               }
               console.warn('AI scoring failed for', match.Bedrijf, ', keeping traditional score');
