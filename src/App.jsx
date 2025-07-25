@@ -460,7 +460,7 @@ Respond with ONLY valid JSON:
   // AI Scoring function using Gemini
   const getAIScore = async (inputAnalysis, customer) => {
     const timeoutMs = 10000;
-    const prompt = `Analyze the match between this prospect and customer:
+    const prompt = `You are a company analyser. Prospect = a company which business processes we need to check how similair they are to "CUSTOMER". CUSTOMER = A customer of the company you work for, with documented usecases of their services. Analyze the match between the business processes of these 2 companies:
 
 PROSPECT:
 ${JSON.stringify(inputAnalysis, null, 2)}
